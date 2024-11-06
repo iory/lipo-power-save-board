@@ -14,7 +14,7 @@ void setup() {
   USBSerial.begin(115200);
   pinMode(EN_BATT, OUTPUT_OPEN_DRAIN);
   // pinMode(EN_BATT, INPUT);
-  digitalWrite(EN_BATT, HIGH);
+  digitalWrite(EN_BATT, LOW);
   pinMode(EN_RGB_LED_PIN, OUTPUT_OPEN_DRAIN);
   digitalWrite(EN_RGB_LED_PIN, LOW);
 
@@ -24,7 +24,7 @@ void setup() {
   digitalWrite(EN_TXRX1, HIGH);
 
   pinMode(EN_VCC33, OUTPUT_OPEN_DRAIN);
-  digitalWrite(EN_VCC33, HIGH);
+  digitalWrite(EN_VCC33, LOW);
 
   pinMode(EN_I2C, OUTPUT_OPEN_DRAIN);
   digitalWrite(EN_I2C, HIGH);
