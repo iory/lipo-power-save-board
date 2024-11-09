@@ -6,15 +6,15 @@ const byte PSEUDO_EN_PIN = 7;
 
 constexpr int EN_TXRX1 = 14;
 constexpr int EN_TXRX2 = 4;
-constexpr int EN_BATT = 2;
-constexpr int EN_5V = 10;
+constexpr int EN_BATT = 11;
+constexpr int EN_5V = 13;
 
 const byte TX_PIN1 = 17;
 const byte RX_PIN1 = 18;
 
 const long BAUDRATE = 1250000;
 const int TIMEOUT = 20;
-const int KJS_ID = 20;
+const int KJS_ID = 19;
 IcsHardSerialClass *krs;
 
 unsigned long suc_start_time = 0;
@@ -22,16 +22,16 @@ bool suc_set_time = false;
 
 void setup()
 {
-  pinMode(EN_BATT, OUTPUT_OPEN_DRAIN);
-  digitalWrite(EN_BATT, LOW);
+  pinMode(EN_BATT, OUTPUT);
+  digitalWrite(EN_BATT, HIGH);
   pinMode(EN_TXRX1, OUTPUT_OPEN_DRAIN);
   digitalWrite(EN_TXRX1, LOW);
 
   pinMode(EN_TXRX2, OUTPUT_OPEN_DRAIN);
-  digitalWrite(EN_TXRX1, HIGH);
+  digitalWrite(EN_TXRX2, HIGH);
 
-  pinMode(EN_5V, OUTPUT_OPEN_DRAIN);
-  digitalWrite(EN_5V, LOW);
+  pinMode(EN_5V, OUTPUT);
+  digitalWrite(EN_5V, HIGH);
 
   USBSerial.begin(115200);
   while (!USBSerial) {
@@ -41,8 +41,8 @@ void setup()
 
   // === Servo === //
   pinMode(TX_PIN1, OUTPUT_OPEN_DRAIN);
-  Serial.begin(BAUDRATE, SERIAL_8E1, RX_PIN1, TX_PIN1, false, TIMEOUT);
-  krs = new IcsHardSerialClass(&Serial, PSEUDO_EN_PIN, BAUDRATE, TIMEOUT);
+  Serial1.begin(BAUDRATE, SERIAL_8E1, RX_PIN1, TX_PIN1, false, TIMEOUT);
+  krs = new IcsHardSerialClass(&Serial1, PSEUDO_EN_PIN, BAUDRATE, TIMEOUT);
   krs->begin();
 }
 
@@ -74,21 +74,26 @@ bool suc = false;
 void loop()
 {
   if (suc == false && pressure > -12) {
-    krs->setGPIO(KJS_ID, 1, 0);
+    krs->setGPIO(KJS_ID, 0, 1);
+
+    digitalWrite(EN_5V, HIGH);
     suc = true;
     suc_set_time = true; // Start the 5-second timer
     suc_start_time = millis(); // Record the current time
   } else if (suc == true && pressure < -17) {
+    digitalWrite(EN_5V, LOW);
     suc = false;
     krs->setGPIO(KJS_ID, 0, 0);
   }
 
-  // Check if 5 seconds have passed since setting suc == true
-  if (suc_set_time && millis() - suc_start_time >= 5000) {
-    krs->setGPIO(KJS_ID, 0, 1); // Set GPIO after 5 seconds
-    delay(2000);
-    suc_set_time = false; // Reset the flag
-  }
+  // // Check if 5 seconds have passed since setting suc == true
+  // if (suc_set_time && millis() - suc_start_time >= 5000) {
+  //   krs->setGPIO(KJS_ID, 0, 1); // Set GPIO after 5 seconds
+  //   digitalWrite(EN_5V, LOW);
+
+  //   delay(2000);
+  //   suc_set_time = false; // Reset the flag
+  // }
 
   pressure = suction();
   delay(10);
