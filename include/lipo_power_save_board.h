@@ -103,6 +103,12 @@ class LipoPowerSaveBoard {
     esp_deep_sleep_start();
   }
 
+  void enterDeepSleepUntilButtonPress() {
+    rtc_gpio_pullup_en((gpio_num_t)GPIO_NUM_12);
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_12, LOW);
+    esp_deep_sleep_start();
+  }
+
   void initICS() {
     pinMode(_TX_PIN1, OUTPUT_OPEN_DRAIN);
     Serial1.begin(BAUDRATE, SERIAL_8E1, _RX_PIN1, _TX_PIN1, false, TIMEOUT);
@@ -121,6 +127,19 @@ class LipoPowerSaveBoard {
     }
   }
 
+  float getAveragePressure(int n = 5) {
+    float pressure = 0;
+    std::vector<byte> rx_buff;
+    for (int i = 0; i < n; ++i) {
+      while (rx_buff.size() == 0) {
+        rx_buff = _krs->getSubcommandPacket(KJS_ID);
+      }
+      pressure += _krs->getPressureFromPacket(rx_buff);
+      rx_buff.clear();
+    }
+    return pressure / n;
+  }
+
   void releaseVacuum() {
     _krs->setGPIO(KJS_ID, 1, 1);
   }
@@ -135,6 +154,10 @@ class LipoPowerSaveBoard {
     _krs->setGPIO(KJS_ID, 0, 0);
     delay(10);
     disablePump();
+  }
+
+  int getButtonPin() {
+    return 12;
   }
 
  private:
