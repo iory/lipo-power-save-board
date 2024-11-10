@@ -19,6 +19,7 @@ class LipoPowerSaveBoard {
     pinMode(_enablePumpPin, OUTPUT);
     pinMode(_enableVCC33Pin, OUTPUT_OPEN_DRAIN);
     pinMode(_enableRGBPin, OUTPUT_OPEN_DRAIN);
+    pinMode(_enableI2CPin, OUTPUT_OPEN_DRAIN);
     pinMode(_enableTXRX1, OUTPUT_OPEN_DRAIN);
     digitalWrite(_enableTXRX1, LOW);
     pinMode(_enableTXRX2, OUTPUT_OPEN_DRAIN);
@@ -42,6 +43,13 @@ class LipoPowerSaveBoard {
   }
   void disablePump() {
     digitalWrite(_enablePumpPin, LOW);
+  }
+
+  void enableI2C() {
+    digitalWrite(_enableI2CPin, LOW);
+  }
+  void disableI2C() {
+    digitalWrite(_enableI2CPin, HIGH);
   }
 
   void enableVCC33() {
@@ -172,6 +180,7 @@ class LipoPowerSaveBoard {
   int _enableRGBPin = 33;
   int _enableTXRX1 = 14;
   int _enableTXRX2 = 4;
+  int _enableI2CPin = 34;
   byte _TX_PIN1 = 17;
   byte _RX_PIN1 = 18;
 
