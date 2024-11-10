@@ -4,9 +4,12 @@
 #include <Adafruit_NeoPixel.h>
 #include "driver/gpio.h"
 #include <driver/rtc_io.h>
-
+#include <IcsHardSerialClass.h>
 
 constexpr int uS_TO_S_FACTOR = 1000000ULL;  /* Conversion factor for micro seconds to seconds */
+const long BAUDRATE = 1250000;
+const int TIMEOUT = 20;
+const int KJS_ID = 19;
 
 class LipoPowerSaveBoard {
  public:
@@ -16,8 +19,13 @@ class LipoPowerSaveBoard {
     pinMode(_enablePumpPin, OUTPUT);
     pinMode(_enableVCC33Pin, OUTPUT_OPEN_DRAIN);
     pinMode(_enableRGBPin, OUTPUT_OPEN_DRAIN);
+    pinMode(_enableTXRX1, OUTPUT_OPEN_DRAIN);
+    digitalWrite(_enableTXRX1, LOW);
+    pinMode(_enableTXRX2, OUTPUT_OPEN_DRAIN);
+    digitalWrite(_enableTXRX2, LOW);
     _pixels.begin();
     _pixels.setBrightness(_brightness);
+    initICS();
   }
 
   void enableBattery() {
@@ -48,6 +56,19 @@ class LipoPowerSaveBoard {
   }
   void disableRGB() {
     digitalWrite(_enableRGBPin, HIGH);
+  }
+
+  void enableTXRX1() {
+    digitalWrite(_enableTXRX1, LOW);
+  }
+  void disableTXRX1() {
+    digitalWrite(_enableTXRX1, HIGH);
+  }
+  void enableTXRX2() {
+    digitalWrite(_enableTXRX2, LOW);
+  }
+  void disableTXRX2() {
+    digitalWrite(_enableTXRX2, HIGH);
   }
 
   void setBrightness(int brightness) {
@@ -82,11 +103,51 @@ class LipoPowerSaveBoard {
     esp_deep_sleep_start();
   }
 
+  void initICS() {
+    pinMode(_TX_PIN1, OUTPUT_OPEN_DRAIN);
+    Serial1.begin(BAUDRATE, SERIAL_8E1, _RX_PIN1, _TX_PIN1, false, TIMEOUT);
+    _krs = new IcsHardSerialClass(&Serial1, BAUDRATE, TIMEOUT);
+    _krs->begin();
+  }
+
+  float getPressure() {
+    std::vector<byte> rx_buff;
+    while (1) {
+      rx_buff = _krs->getSubcommandPacket(KJS_ID);
+      if (rx_buff.size() > 0) {
+        std::vector<byte> partial_buff(rx_buff.begin() + 2, rx_buff.end());
+        return _krs->getPressureFromPacket(partial_buff);
+      }
+    }
+  }
+
+  void releaseVacuum() {
+    _krs->setGPIO(KJS_ID, 1, 1);
+  }
+
+  void startVacuum() {
+    enablePump();
+    delay(10);
+    _krs->setGPIO(KJS_ID, 0, 1);
+  }
+
+  void stopVacuum() {
+    _krs->setGPIO(KJS_ID, 0, 0);
+    delay(10);
+    disablePump();
+  }
+
  private:
   int _enableVCC33Pin = 35;
   int _enablePumpPin = 13;
   int _enableBatteryPin = 11;
   int _enableRGBPin = 33;
+  int _enableTXRX1 = 14;
+  int _enableTXRX2 = 4;
+  byte _TX_PIN1 = 17;
+  byte _RX_PIN1 = 18;
+
+  IcsHardSerialClass *_krs;
 
   Adafruit_NeoPixel _pixels;
   int _brightness;

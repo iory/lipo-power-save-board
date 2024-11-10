@@ -1,100 +1,50 @@
 #include "Arduino.h"
-#include <IcsHardSerialClass.h>
 
-// === Servo === //
-const byte PSEUDO_EN_PIN = 7;
+#include "lipo_power_save_board.h"
 
-constexpr int EN_TXRX1 = 14;
-constexpr int EN_TXRX2 = 4;
-constexpr int EN_BATT = 11;
-constexpr int EN_5V = 13;
-
-const byte TX_PIN1 = 17;
-const byte RX_PIN1 = 18;
-
-const long BAUDRATE = 1250000;
-const int TIMEOUT = 20;
-const int KJS_ID = 19;
-IcsHardSerialClass *krs;
+LipoPowerSaveBoard board;
 
 unsigned long suc_start_time = 0;
 bool suc_set_time = false;
+float pressure;
+bool suc = false;
 
 void setup()
 {
-  pinMode(EN_BATT, OUTPUT);
-  digitalWrite(EN_BATT, HIGH);
-  pinMode(EN_TXRX1, OUTPUT_OPEN_DRAIN);
-  digitalWrite(EN_TXRX1, LOW);
-
-  pinMode(EN_TXRX2, OUTPUT_OPEN_DRAIN);
-  digitalWrite(EN_TXRX2, HIGH);
-
-  pinMode(EN_5V, OUTPUT);
-  digitalWrite(EN_5V, HIGH);
+  board.enableBattery();
+  board.showStartupSequence();
 
   USBSerial.begin(115200);
   while (!USBSerial) {
     delay(1); // Wait for serial to connect
   }
   USBSerial.println("Hello!");
-
-  // === Servo === //
-  pinMode(TX_PIN1, OUTPUT_OPEN_DRAIN);
-  Serial1.begin(BAUDRATE, SERIAL_8E1, RX_PIN1, TX_PIN1, false, TIMEOUT);
-  krs = new IcsHardSerialClass(&Serial1, PSEUDO_EN_PIN, BAUDRATE, TIMEOUT);
-  krs->begin();
 }
-
-float suction() {
-  float pressure = -1000.0;
-  while (pressure < -900) {
-    std::vector<byte> rx_buff = krs->getSubcommandPacket(KJS_ID);
-    for (int i = 0; i < rx_buff.size(); ++i) {
-      USBSerial.print(rx_buff[i]);
-      USBSerial.print(' ');
-    }
-    USBSerial.println("");
-
-    if (rx_buff.size() > 0) {
-      // 先頭2byte分捨てる
-      std::vector<byte> partial_buff(rx_buff.begin() + 2, rx_buff.end());
-      pressure = krs->getPressureFromPacket(partial_buff);
-      char log_msg[50];
-      sprintf(log_msg, "pressure: %f kPa", pressure);
-      USBSerial.println(log_msg);
-    }
-  }
-  return pressure;
-}
-
-float pressure = 10000;
-bool suc = false;
 
 void loop()
 {
-  if (suc == false && pressure > -12) {
-    krs->setGPIO(KJS_ID, 0, 1);
-
-    digitalWrite(EN_5V, HIGH);
+  if (suc == false && pressure > -5) {
+    board.startVacuum();
     suc = true;
     suc_set_time = true; // Start the 5-second timer
     suc_start_time = millis(); // Record the current time
-  } else if (suc == true && pressure < -17) {
-    digitalWrite(EN_5V, LOW);
+  } else if (suc == true && pressure < -14) {
+    board.stopVacuum();
     suc = false;
-    krs->setGPIO(KJS_ID, 0, 0);
   }
 
-  // // Check if 5 seconds have passed since setting suc == true
-  // if (suc_set_time && millis() - suc_start_time >= 5000) {
-  //   krs->setGPIO(KJS_ID, 0, 1); // Set GPIO after 5 seconds
-  //   digitalWrite(EN_5V, LOW);
+  // Check if 5 seconds have passed since setting suc == true
+  if (suc_set_time && millis() - suc_start_time >= 5000) {
+    board.releaseVacuum();
+    suc = false;
+    delay(2000);
+    suc_set_time = false; // Reset the flag
+  }
 
-  //   delay(2000);
-  //   suc_set_time = false; // Reset the flag
-  // }
-
-  pressure = suction();
+  pressure = board.getPressure();
+  USBSerial.print(pressure);
+  USBSerial.print(' ');
+  USBSerial.println(suc);
   delay(10);
+
 }
