@@ -6,6 +6,7 @@
 #include "Base64.h"
 #include "HTTPSRedirect.h"
 #include <OneButton.h>
+#include <ArduinoUniqueID.h>
 
 #include "lipo_power_save_board.h"
 #include "deep_sleep_utils.h"
@@ -55,7 +56,6 @@ const char* host = "script.google.com";
 const int httpsPort = 443;
 
 String url = String("/macros/s/") + GScriptId + "/exec";
-String payload_prefix = "{\"timestamps\":[], \"battery_voltages\":[], \"pressures\":[], \"pre_sleep_pressures\":[], \"boot_counts\":[]}";
 String payload = "";
 
 bool longPress = false;
@@ -93,7 +93,7 @@ static void handleLongPress() {
   // Wait for air relay board wakeup.
   delay(10);
 
-  unsigned long pump_timeout = millis() + 5000;
+  unsigned long pump_timeout = millis() + 2000;
   unsigned long current_time = millis();
   USBSerial.println("Release Vacuum");
   while (current_time < pump_timeout) {
@@ -184,6 +184,15 @@ void uploadData(float V_batt, float first_pressure, float pressure, int index) {
   fullUrl += "]&boot_counts=[";
   for (int i = 0; i < index; i++) {
     fullUrl += String(bootCountList[i]);
+    if (i < index - 1) fullUrl += ",";
+  }
+  fullUrl += "]&unique_ids=[";
+  for (int i = 0; i < index; i++) {
+    fullUrl += "\"";
+    for(size_t i = 0; i < UniqueIDsize; i++) {
+      fullUrl += String(UniqueID8[i]);
+    }
+    fullUrl += "\"";
     if (i < index - 1) fullUrl += ",";
   }
   fullUrl += "]";
