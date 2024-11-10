@@ -116,10 +116,15 @@ class LipoPowerSaveBoard {
     _krs->begin();
   }
 
+  void deinitICS() {
+    delete _krs;
+  }
+
   float getPressure() {
     std::vector<byte> rx_buff;
     while (1) {
       rx_buff = _krs->getSubcommandPacket(KJS_ID);
+      USBSerial.printf("[getPressure] rx_buff.size(): %d\n", rx_buff.size());
       if (rx_buff.size() > 0) {
         std::vector<byte> partial_buff(rx_buff.begin() + 2, rx_buff.end());
         return _krs->getPressureFromPacket(partial_buff);

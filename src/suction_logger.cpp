@@ -15,7 +15,7 @@
 
 
 LipoPowerSaveBoard board;
-OneButton btn(board.getButtonPin(), false, false);
+OneButton btn(board.getButtonPin(), true, true);
 
 struct WiFiTaskParams {
   float V_batt;
@@ -30,6 +30,9 @@ enum Mode {
   MODE_COUNT
 };
 
+constexpr int TIME_TO_SLEEP  = 30;        /* Time ESP32 will go to sleep (in seconds) */
+constexpr float pressureThreshold = -5.0;
+constexpr float maxPressureThreshold = -15.0;
 constexpr int historySize = 5;
 RTC_DATA_ATTR int mode = NOTHING;
 RTC_DATA_ATTR int bootCount = 0;
@@ -55,10 +58,6 @@ String url = String("/macros/s/") + GScriptId + "/exec";
 String payload_prefix = "{\"timestamps\":[], \"battery_voltages\":[], \"pressures\":[], \"pre_sleep_pressures\":[], \"boot_counts\":[]}";
 String payload = "";
 
-constexpr int TIME_TO_SLEEP  = 1;        /* Time ESP32 will go to sleep (in seconds) */
-constexpr float pressureThreshold = -5.0;
-constexpr float maxPressureThreshold = -15.0;
-
 bool longPress = false;
 
 
@@ -75,6 +74,7 @@ void enterDeepSleepUntilButtonPress() {
 
 
 static void handleLongPress() {
+  USBSerial.println("handleLongPress Entered");
   longPress = true;
 
   if (timeSyncTaskHandle != NULL) {
@@ -86,12 +86,16 @@ static void handleLongPress() {
     wifiTaskHandle = NULL;
   }
 
+  board.disableBattery();
+  board.disablePump();
+  delay(10);
   board.enableBattery();
   // Wait for air relay board wakeup.
-  delay(100);
+  delay(10);
 
-  unsigned long pump_timeout = millis() + 2000;
+  unsigned long pump_timeout = millis() + 5000;
   unsigned long current_time = millis();
+  USBSerial.println("Release Vacuum");
   while (current_time < pump_timeout) {
     board.releaseVacuum();
     delay(10);
@@ -104,13 +108,14 @@ static void handleLongPress() {
   board.disableBattery();
 
   mode = NOTHING;
+  enterDeepSleepUntilButtonPress();
   longPress = false;
 }
 
 
 void ButtonTask(void *parameter) {
   btn.setClickMs(200);  // Timeout used to distinguish single clicks from double clicks. (msec)
-  // btn.attachLongPressStart(handleLongPress);
+  btn.attachLongPressStart(handleLongPress);
   while (true) {
     btn.tick();
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -212,7 +217,7 @@ float pumpControl(float first_pressure) {
                    pressure, longPress);
   if (!longPress && pressure > pressureThreshold) {
     current_time = millis();
-    while (pressure > maxPressureThreshold && (current_time < pump_timeout)) {
+    while (!longPress && pressure > maxPressureThreshold && (current_time < pump_timeout)) {
       board.startVacuum();
       current_time = millis();
       pressure = board.getPressure();
@@ -220,8 +225,10 @@ float pumpControl(float first_pressure) {
       sprintf(log_msg, "pressure: %f kPa", pressure);
       USBSerial.println(log_msg);
     }
-    for (int i = 0; i < 2; ++i) {
-      board.stopVacuum();
+    if (!longPress) {
+      for (int i = 0; i < 2; ++i) {
+        board.stopVacuum();
+      }
     }
   }
   if (current_time >= pump_timeout) {
@@ -278,6 +285,11 @@ void setup() {
     float pressure = pumpControl(first_pressure);
 
     USBSerial.printf("boot Count: %d dataIndex: %d, historySize: %d\n", bootCount, dataIndex, historySize);
+
+    if (longPress) {
+      USBSerial.printf("Shutting Down\n");
+      return;
+    }
 
     board.disableBattery();
     board.disableVCC33();
