@@ -4,7 +4,7 @@
 #include "esp_sleep.h"
 
 
-void manageWakeupReason() {
+esp_sleep_wakeup_cause_t manageWakeupReason() {
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
 
   // Check if ESP_SLEEP_WAKEUP_EXT0 was the wakeup cause by directly comparing it here.
@@ -57,6 +57,7 @@ void manageWakeupReason() {
     USBSerial.printf("[ESP_SLEEP_WAKEUP] Woken up from non-sleep mode or unknown reason\n");
     break;
   }
+  return wakeup_reason;
 }
 
 
