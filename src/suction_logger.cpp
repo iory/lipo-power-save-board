@@ -363,7 +363,7 @@ void timeSyncTask(void *parameter) {
 
 
 void setup() {
-    USBSerial.begin(115200);
+    // USBSerial.begin(115200);
     USBSerial.println("hello");
 
     bootCount++;
