@@ -7,6 +7,7 @@
 #include "HTTPSRedirect.h"
 #include <OneButton.h>
 #include <ArduinoUniqueID.h>
+#include <Adafruit_SGP30.h>
 
 #include "lipo_power_save_board.h"
 #include "deep_sleep_utils.h"
@@ -15,13 +16,11 @@
 #include "config.h"
 
 
+Adafruit_SGP30 sgp;
 LipoPowerSaveBoard board;
 OneButton btn(board.getButtonPin(), true, true);
 
 struct WiFiTaskParams {
-  float V_batt;
-  float first_pressure;
-  float pressure;
   int dataIndex;
 };
 
@@ -31,10 +30,10 @@ enum Mode {
   MODE_COUNT
 };
 
-constexpr int TIME_TO_SLEEP  = 30;        /* Time ESP32 will go to sleep (in seconds) */
-constexpr float pressureThreshold = -5.0;
+constexpr int TIME_TO_SLEEP  = 10;        /* Time ESP32 will go to sleep (in seconds) */
+constexpr float pressureThreshold = -7.0;
 constexpr float maxPressureThreshold = -15.0;
-constexpr int historySize = 5;
+constexpr int historySize = 20;
 RTC_DATA_ATTR int mode = NOTHING;
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR float batteryVoltages[historySize];
@@ -42,14 +41,21 @@ RTC_DATA_ATTR float pressures[historySize];
 RTC_DATA_ATTR float preSleepPressures[historySize];
 RTC_DATA_ATTR time_t timestamps[historySize];
 RTC_DATA_ATTR int bootCountList[historySize];
+RTC_DATA_ATTR int TVOCList[historySize];
+RTC_DATA_ATTR int eCO2List[historySize];
+RTC_DATA_ATTR int H2List[historySize];
+RTC_DATA_ATTR int EthanolList[historySize];
 RTC_DATA_ATTR bool timeConfigured = false;
+RTC_DATA_ATTR bool sgpConfigured = false;
 RTC_DATA_ATTR time_t nextTime = 0;
 RTC_DATA_ATTR time_t currentTime = 0;
 RTC_DATA_ATTR int dataIndex = 0;
-
+RTC_DATA_ATTR uint16_t TVOC_base;
+RTC_DATA_ATTR uint16_t eCO2_base;
 
 TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t timeSyncTaskHandle = NULL;
+TaskHandle_t co2SensorTaskHandle = NULL;
 bool wifiTaskEnd = false;
 
 const char* host = "script.google.com";
@@ -60,15 +66,26 @@ String payload = "";
 
 bool longPress = false;
 
+uint32_t getAbsoluteHumidity(float temperature, float humidity) {
+  // approximation formula from Sensirion SGP30 Driver Integration chapter 3.15
+  const float absoluteHumidity = 216.7f * ((humidity / 100.0f) * 6.112f * exp((17.62f * temperature) / (243.12f + temperature)) / (273.15f + temperature)); // [g/m^3]
+  const uint32_t absoluteHumidityScaled = static_cast<uint32_t>(1000.0f * absoluteHumidity); // [mg/m^3]
+  return absoluteHumidityScaled;
+}
+
 
 void enterTimedDeepSleep() {
   nextTime = currentTime + TIME_TO_SLEEP;
+  board.disableBattery();
+  board.disableVCC33();
   board.enterDeepSleep(TIME_TO_SLEEP);
 }
 
 void enterDeepSleepUntilButtonPress() {
   bootCount = 0;
   timeConfigured = false;
+  board.disableBattery();
+  board.disableVCC33();
   board.enterDeepSleepUntilButtonPress();
 }
 
@@ -84,6 +101,10 @@ static void handleLongPress() {
   if (wifiTaskHandle != NULL) {
     vTaskDelete(wifiTaskHandle);
     wifiTaskHandle = NULL;
+  }
+  if (co2SensorTaskHandle != NULL) {
+    vTaskDelete(co2SensorTaskHandle);
+    co2SensorTaskHandle = NULL;
   }
 
   board.disableBattery();
@@ -123,6 +144,68 @@ void ButtonTask(void *parameter) {
 }
 
 
+void co2SensorTask(void *parameter) {
+  board.enableVCC33();
+  board.enableI2C();
+
+  Wire.begin(46, 45); // (SDA, SCL)
+  delay(100);
+  if (!sgp.begin()){
+    USBSerial.println("Sensor not found :(");
+    while (1) {
+      USBSerial.println("Sensor not found :(");
+    }
+  }
+  float temperature = 22.1; // [°C]
+  float humidity = 45.2; // [%RH]
+  sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
+
+  if (!sgpConfigured) {
+    int sgp_init_counter = 0;
+    while (sgp_init_counter < 30) {
+      if (!sgp.IAQmeasure()) {
+        USBSerial.println("Measurement failed");
+        continue;
+      }
+      USBSerial.print("TVOC "); USBSerial.print(sgp.TVOC); USBSerial.print(" ppb\t");
+      USBSerial.print("eCO2 "); USBSerial.print(sgp.eCO2); USBSerial.println(" ppm");
+      if (!sgp.IAQmeasureRaw()) {
+        USBSerial.println("Raw Measurement failed");
+        continue;
+      }
+      delay(1000);
+      sgp_init_counter++;
+    }
+    if (!sgp.getIAQBaseline(&eCO2_base, &TVOC_base)) {
+      USBSerial.println("Failed to get baseline readings");
+    }
+    USBSerial.print("****Baseline values: eCO2: 0x"); USBSerial.print(eCO2_base, HEX);
+    USBSerial.print(" & TVOC: 0x"); USBSerial.println(TVOC_base, HEX);
+    USBSerial.println("");
+    sgpConfigured = true;
+  } else {
+    USBSerial.print("****Baseline values: eCO2: 0x"); USBSerial.print(eCO2_base, HEX);
+    USBSerial.print(" & TVOC: 0x"); USBSerial.println(TVOC_base, HEX);
+    sgp.setIAQBaseline(eCO2_base, TVOC_base);
+  }
+
+  delay(20);
+
+  if (!sgp.IAQmeasure()) {
+    USBSerial.println("[CO2 Sensor] Measurement failed");
+  }
+  if (!sgp.IAQmeasureRaw()) {
+    USBSerial.println("Raw Measurement failed");
+  }
+
+  board.disableVCC33();
+  board.disableI2C();
+
+  co2SensorTaskHandle = NULL;
+  vTaskDelete(NULL);
+}
+
+
 void syncTime() {
   int wifiRSSI = 0;
   wl_status_t wifiStatus = startWiFi(ssid, password, wifiRSSI);
@@ -142,7 +225,7 @@ void syncTime() {
 }
 
 
-void uploadData(float V_batt, float first_pressure, float pressure, int index) {
+void uploadData(int index) {
   int wifiRSSI = 0; // “Received Signal Strength Indicator"
   wl_status_t wifiStatus = startWiFi(ssid, password, wifiRSSI);
   if (wifiStatus != WL_CONNECTED) {
@@ -186,6 +269,27 @@ void uploadData(float V_batt, float first_pressure, float pressure, int index) {
     fullUrl += String(bootCountList[i]);
     if (i < index - 1) fullUrl += ",";
   }
+  fullUrl += "]&tvoc=[";
+  for (int i = 0; i < index; i++) {
+    fullUrl += String(TVOCList[i]);
+    if (i < index - 1) fullUrl += ",";
+  }
+  fullUrl += "]&eco2=[";
+  for (int i = 0; i < index; i++) {
+    fullUrl += String(eCO2List[i]);
+    if (i < index - 1) fullUrl += ",";
+  }
+  fullUrl += "]&h2=[";
+  for (int i = 0; i < index; i++) {
+    fullUrl += String(H2List[i]);
+    if (i < index - 1) fullUrl += ",";
+  }
+  fullUrl += "]&ethanol=[";
+  for (int i = 0; i < index; i++) {
+    fullUrl += String(EthanolList[i]);
+    if (i < index - 1) fullUrl += ",";
+  }
+
   fullUrl += "]&unique_ids=[";
   for (int i = 0; i < index; i++) {
     fullUrl += "\"";
@@ -248,11 +352,8 @@ float pumpControl(float first_pressure) {
 
 void WiFiTask(void *parameter) {
   WiFiTaskParams *params = (WiFiTaskParams *)parameter;
-  float V_batt = params->V_batt;
-  float first_pressure = params->first_pressure;
-  float pressure = params->pressure;
   int index = params->dataIndex;
-  uploadData(V_batt, first_pressure, pressure, index);
+  uploadData(index);
   vTaskDelete(NULL);
 }
 
@@ -264,9 +365,11 @@ void timeSyncTask(void *parameter) {
 }
 
 
+
 void setup() {
     USBSerial.begin(115200);
     USBSerial.println("hello");
+
     bootCount++;
 
     xTaskCreatePinnedToCore(ButtonTask, "Button Task", 2048, NULL, 24, NULL, 0);
@@ -287,7 +390,15 @@ void setup() {
     }
 
     board.enableBattery();
-    delay(20);
+    board.stopVacuum();
+
+    xTaskCreatePinnedToCore(co2SensorTask, "co2Sensor Task", 2048, NULL, 1, &co2SensorTaskHandle, 1);
+
+    uint32_t vin = 0;
+    for(int i = 0; i < 16; i++) {
+      vin = vin + analogReadMilliVolts(A0); // ADC with correction
+    }
+    float V_batt = (vin / 16.0) / 1000.0;
 
     float first_pressure = board.getPressure();
     USBSerial.printf("pressure: %f kPa\n", first_pressure);
@@ -300,9 +411,6 @@ void setup() {
       return;
     }
 
-    board.disableBattery();
-    board.disableVCC33();
-
     if (mode == NOTHING) {
       enterDeepSleepUntilButtonPress();
     }
@@ -313,12 +421,20 @@ void setup() {
       }
     }
 
+    while (co2SensorTaskHandle != NULL) {
+      delay(10);
+    }
+
     if (dataIndex < historySize) {
       timestamps[dataIndex] = currentTime;
-      batteryVoltages[dataIndex] = 0.0;
+      batteryVoltages[dataIndex] = V_batt;
       pressures[dataIndex] = first_pressure;
       preSleepPressures[dataIndex] = pressure;
       bootCountList[dataIndex] = bootCount;
+      TVOCList[dataIndex] = sgp.TVOC;
+      eCO2List[dataIndex] = sgp.eCO2;
+      H2List[dataIndex] = sgp.rawH2;
+      EthanolList[dataIndex] = sgp.rawEthanol;
       dataIndex++;
     }
 
@@ -327,9 +443,6 @@ void setup() {
       unsigned long start_time = millis();
 
       WiFiTaskParams *params = (WiFiTaskParams *)malloc(sizeof(WiFiTaskParams));
-      params->V_batt = 0;
-      params->first_pressure = first_pressure;
-      params->pressure = pressure;
       params->dataIndex = dataIndex;
 
       wifiTaskEnd = false;

@@ -118,6 +118,7 @@ class LipoPowerSaveBoard {
   }
 
   void initICS() {
+    enableTXRX1();
     pinMode(_TX_PIN1, OUTPUT_OPEN_DRAIN);
     Serial1.begin(BAUDRATE, SERIAL_8E1, _RX_PIN1, _TX_PIN1, false, TIMEOUT);
     _krs = new IcsHardSerialClass(&Serial1, BAUDRATE, TIMEOUT);
