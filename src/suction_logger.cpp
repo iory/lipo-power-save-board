@@ -157,22 +157,23 @@ void co2SensorTask(void *parameter) {
   float humidity = 45.2; // [%RH]
   sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
 
-  if (!sgpConfigured) {
-    int sgp_init_counter = 0;
-    while (sgp_init_counter < 30) {
-      if (!sgp.IAQmeasure()) {
-        USBSerial.println("Measurement failed");
-        continue;
-      }
-      USBSerial.print("TVOC "); USBSerial.print(sgp.TVOC); USBSerial.print(" ppb\t");
-      USBSerial.print("eCO2 "); USBSerial.print(sgp.eCO2); USBSerial.println(" ppm");
-      if (!sgp.IAQmeasureRaw()) {
-        USBSerial.println("Raw Measurement failed");
-        continue;
-      }
-      delay(1000);
-      sgp_init_counter++;
+  int sgp_init_counter = 0;
+  while (sgp_init_counter < 15) {
+    if (!sgp.IAQmeasure()) {
+      USBSerial.println("Measurement failed");
+      continue;
     }
+    USBSerial.print("Waiting for ");
+    USBSerial.print(15 - sgp_init_counter);
+    USBSerial.println("[s] to initialize air quality..");
+    if (!sgp.IAQmeasureRaw()) {
+      USBSerial.println("Raw Measurement failed");
+      continue;
+    }
+    delay(1000);
+    sgp_init_counter++;
+  }
+  if (!sgpConfigured) {
     if (!sgp.getIAQBaseline(&eCO2_base, &TVOC_base)) {
       USBSerial.println("Failed to get baseline readings");
     }
@@ -181,16 +182,14 @@ void co2SensorTask(void *parameter) {
     USBSerial.println("");
     sgpConfigured = true;
   } else {
-    USBSerial.print("****Baseline values: eCO2: 0x"); USBSerial.print(eCO2_base, HEX);
-    USBSerial.print(" & TVOC: 0x"); USBSerial.println(TVOC_base, HEX);
     sgp.setIAQBaseline(eCO2_base, TVOC_base);
   }
-
-  delay(20);
 
   if (!sgp.IAQmeasure()) {
     USBSerial.println("[CO2 Sensor] Measurement failed");
   }
+  USBSerial.print("TVOC "); USBSerial.print(sgp.TVOC); USBSerial.print(" ppb\t");
+  USBSerial.print("eCO2 "); USBSerial.print(sgp.eCO2); USBSerial.println(" ppm");
   if (!sgp.IAQmeasureRaw()) {
     USBSerial.println("Raw Measurement failed");
   }
@@ -366,7 +365,7 @@ void timeSyncTask(void *parameter) {
 
 
 void setup() {
-    // USBSerial.begin(115200);
+    USBSerial.begin(115200);
     USBSerial.println("hello");
 
     bootCount++;
