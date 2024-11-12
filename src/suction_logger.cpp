@@ -63,6 +63,9 @@ String payload = "";
 
 bool longPress = false;
 
+unsigned long setupTime = 0;
+unsigned long enterTimedDeepSleepTime = 0;
+
 uint32_t getAbsoluteHumidity(float temperature, float humidity) {
   // approximation formula from Sensirion SGP30 Driver Integration chapter 3.15
   const float absoluteHumidity = 216.7f * ((humidity / 100.0f) * 6.112f * exp((17.62f * temperature) / (243.12f + temperature)) / (273.15f + temperature)); // [g/m^3]
@@ -72,7 +75,8 @@ uint32_t getAbsoluteHumidity(float temperature, float humidity) {
 
 
 void enterTimedDeepSleep() {
-  nextTime = currentTime + TIME_TO_SLEEP;
+  enterTimedDeepSleepTime = millis();
+  nextTime = currentTime + TIME_TO_SLEEP + (enterTimedDeepSleepTime - setupTime) / 1000;
   board.disableBattery();
   board.disableVCC33();
   board.enterDeepSleep(TIME_TO_SLEEP);
@@ -361,6 +365,8 @@ void timeSyncTask(void *parameter) {
 
 
 void setup() {
+    setupTime = millis();
+
     USBSerial.begin(115200);
     USBSerial.println("hello");
 
