@@ -162,13 +162,14 @@ void co2SensorTask(void *parameter) {
   sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
 
   int sgp_init_counter = 0;
-  while (sgp_init_counter < 15) {
+  int wait_time = 16;
+  while (sgp_init_counter < wait_time) {
     if (!sgp.IAQmeasure()) {
       USBSerial.println("Measurement failed");
       continue;
     }
     USBSerial.print("Waiting for ");
-    USBSerial.print(15 - sgp_init_counter);
+    USBSerial.print(wait_time - sgp_init_counter);
     USBSerial.println("[s] to initialize air quality..");
     delay(1000);
     sgp_init_counter++;
