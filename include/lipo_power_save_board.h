@@ -8,7 +8,7 @@
 
 constexpr int uS_TO_S_FACTOR = 1000000ULL;  /* Conversion factor for micro seconds to seconds */
 const long BAUDRATE = 1250000;
-const int TIMEOUT = 20;
+const int TIMEOUT = 1000;
 const int KJS_ID = 19;
 
 class LipoPowerSaveBoard {
