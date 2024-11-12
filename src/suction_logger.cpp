@@ -199,6 +199,8 @@ void co2SensorTask(void *parameter) {
   board.disableI2C();
 
   co2TaskEnd = true;
+  co2SensorTaskHandle = NULL;
+  vTaskDelete(NULL);
 }
 
 
