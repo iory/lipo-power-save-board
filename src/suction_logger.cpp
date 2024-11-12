@@ -52,6 +52,7 @@ RTC_DATA_ATTR uint16_t eCO2_base;
 TaskHandle_t wifiTaskHandle = NULL;
 TaskHandle_t timeSyncTaskHandle = NULL;
 TaskHandle_t co2SensorTaskHandle = NULL;
+bool co2TaskEnd = false;
 bool wifiTaskEnd = false;
 
 const char* host = "script.google.com";
@@ -197,8 +198,7 @@ void co2SensorTask(void *parameter) {
   board.disableVCC33();
   board.disableI2C();
 
-  co2SensorTaskHandle = NULL;
-  vTaskDelete(NULL);
+  co2TaskEnd = true;
 }
 
 
@@ -418,7 +418,7 @@ void setup() {
       }
     }
 
-    while (co2SensorTaskHandle != NULL) {
+    while (co2TaskEnd == false) {
       delay(10);
     }
 
