@@ -290,7 +290,8 @@ void uploadData(int index) {
   for (int i = 0; i < index; i++) {
     fullUrl += "\"";
     for(size_t i = 0; i < UniqueIDsize; i++) {
-      fullUrl += String(UniqueID8[i]);
+      if (UniqueID[i] < 0x10) fullUrl += "0";
+      fullUrl += String(UniqueID[i], HEX);
     }
     fullUrl += "\"";
     if (i < index - 1) fullUrl += ",";
