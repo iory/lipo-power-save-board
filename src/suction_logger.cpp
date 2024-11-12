@@ -166,10 +166,6 @@ void co2SensorTask(void *parameter) {
     USBSerial.print("Waiting for ");
     USBSerial.print(15 - sgp_init_counter);
     USBSerial.println("[s] to initialize air quality..");
-    if (!sgp.IAQmeasureRaw()) {
-      USBSerial.println("Raw Measurement failed");
-      continue;
-    }
     delay(1000);
     sgp_init_counter++;
   }
