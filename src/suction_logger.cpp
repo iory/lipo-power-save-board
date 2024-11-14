@@ -162,7 +162,7 @@ void co2SensorTask(void *parameter) {
   sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
 
   int sgp_init_counter = 0;
-  int wait_time = 16;
+  int wait_time = 20;
   while (sgp_init_counter < wait_time) {
     if (!sgp.IAQmeasure()) {
       USBSerial.println("Measurement failed");
@@ -337,6 +337,7 @@ float pumpControl(float first_pressure) {
       sprintf(log_msg, "pressure: %f kPa", pressure);
       USBSerial.println(log_msg);
     }
+    delay(1000);
     if (!longPress) {
       for (int i = 0; i < 2; ++i) {
         board.stopVacuum();
@@ -393,7 +394,16 @@ void setup() {
     board.enableBattery();
     board.stopVacuum();
 
-    xTaskCreatePinnedToCore(co2SensorTask, "co2Sensor Task", 2048, NULL, 1, &co2SensorTaskHandle, 1);
+    if (bootCount % 5 == 0) {
+      xTaskCreatePinnedToCore(co2SensorTask, "co2Sensor Task", 2048, NULL, 1, &co2SensorTaskHandle, 1);
+    }
+    else {
+      sgp.TVOC = -1;
+      sgp.eCO2 = -1;
+      sgp.rawH2 = -1;
+      sgp.rawEthanol = -1;
+      co2TaskEnd = true;
+    }
 
     uint32_t vin = 0;
     for(int i = 0; i < 16; i++) {
@@ -404,8 +414,19 @@ void setup() {
     float first_pressure = board.getPressure();
     USBSerial.printf("pressure: %f kPa\n", first_pressure);
     float pressure = pumpControl(first_pressure);
+    float after_pressure = board.getPressure();
+    USBSerial.printf("Stop vacuum. Pressure: %f kPa\n", after_pressure);
 
     USBSerial.printf("boot Count: %d dataIndex: %d, historySize: %d\n", bootCount, dataIndex, historySize);
+
+    // MAC address
+    String unique_id = "";
+    for(size_t i = 0; i < UniqueIDsize; i++) {
+      if (UniqueID[i] < 0x10) unique_id += "0";
+      unique_id += String(UniqueID[i], HEX);
+    }
+    USBSerial.print("MAC address: ");
+    USBSerial.println(unique_id);
 
     if (longPress) {
       USBSerial.printf("Shutting Down\n");
