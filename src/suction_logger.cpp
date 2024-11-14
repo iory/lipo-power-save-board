@@ -58,6 +58,7 @@ bool wifiTaskEnd = false;
 const char* host = "script.google.com";
 const int httpsPort = 443;
 
+char* GScriptId = getGScriptId();
 String url = String("/macros/s/") + GScriptId + "/exec";
 String payload = "";
 
