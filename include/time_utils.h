@@ -6,8 +6,9 @@
 // NTPサーバーとタイムゾーン設定
 const unsigned long NTP_TIMEOUT_MS = 5000;
 const char* TIMEZONE = "JST-9"; // 日本標準時 (UTC+9)
-const char* NTP_SERVER_1 = "pool.ntp.org";
-const char* NTP_SERVER_2 = "time.nist.gov";
+const char* NTP_SERVER_1 = "ntp.nict.jp";
+const char* NTP_SERVER_2 = "time.google.com";
+const char* NTP_SERVER_3 = "ntp.jst.mfeed.ad.jp";
 
 /* Pure function that waits for NTP server time sync.
  *
@@ -17,7 +18,8 @@ const char* NTP_SERVER_2 = "time.nist.gov";
  * Note: Must be connected to WiFi to get time from NTP server.
  */
 bool waitForSNTPSync(struct tm *timeInfo, unsigned long ntpTimeout = NTP_TIMEOUT_MS,
-                         const char* timezone = TIMEZONE, const char* ntpServer1 = NTP_SERVER_1, const char* ntpServer2 = NTP_SERVER_2)
+                     const char* timezone = TIMEZONE, const char* ntpServer1 = NTP_SERVER_1, const char* ntpServer2 = NTP_SERVER_2,
+                     const char* ntpServer3 = NTP_SERVER_3)
 {
   configTzTime(timezone, ntpServer1, ntpServer2);
 

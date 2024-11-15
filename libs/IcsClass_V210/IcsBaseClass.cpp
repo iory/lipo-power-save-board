@@ -685,13 +685,13 @@ std::vector<byte> IcsBaseClass::getSubcommandPacket(byte id) {
   txCmd[1] = SC_send;
   flg = synchronize(txCmd, sizeof(txCmd), rx_buff.data(), recv_length);
 
-  if (flg) {
-    for (int i = 0; i < recv_length; ++i) {
-      USBSerial.print(rx_buff[i]);
-      USBSerial.print(' ');
-    }
-    USBSerial.println("");
-  }
+  // if (flg) {
+  //   for (int i = 0; i < recv_length; ++i) {
+  //     USBSerial.print(rx_buff[i]);
+  //     USBSerial.print(' ');
+  //   }
+  //   USBSerial.println("");
+  // }
 
   if (!flg) {
     rx_buff.clear();

@@ -32,8 +32,8 @@ class IcsHardSerialClass : public IcsBaseClass
 	
 	IcsHardSerialClass();
 	
-	IcsHardSerialClass(HardwareSerial* icsSerial,byte enpin);
-	IcsHardSerialClass(HardwareSerial* icsSerial,byte enpin,long baudrate,int timeout);    
+	IcsHardSerialClass(HardwareSerial* icsSerial);
+	IcsHardSerialClass(HardwareSerial* icsSerial,long baudrate,int timeout);
 
 
       
@@ -48,7 +48,6 @@ class IcsHardSerialClass : public IcsBaseClass
   protected: 
 	 
 	HardwareSerial *icsHardSerial;  ///<arudinoのシリアル型のポインタを格納
-	int enPin;         ///<イネーブルピン(送受信を切り替える)のピン番号を格納しておく変数
 	long baudRate;     ///<ICSの通信速度を格納しておく変数
 	int timeOut;               ///<通信のタイムアウト(ms)を格納しておく変数
 
@@ -60,19 +59,7 @@ class IcsHardSerialClass : public IcsBaseClass
   public:
       bool begin();
       bool begin(long baudrate,int timeout);
-      bool begin(HardwareSerial *serial,int enpin,long baudrate,int timeout);
-
-
-  //イネーブルピンの処理
-  protected : 
-	/**
-	*	@brief enPinに割り当てられているピンをHにする
-	**/
-	inline void enHigh(){digitalWrite(enPin, HIGH);}
-	/**
-	*	@brief enPinに割り当てられているピンをLにする
-	**/
-	inline void enLow(){digitalWrite(enPin, LOW);}
+      bool begin(HardwareSerial *serial,long baudrate,int timeout);
 
   //データ送受信
   public :

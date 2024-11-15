@@ -25,26 +25,22 @@ IcsHardSerialClass::IcsHardSerialClass()
 /**
 *	@brief コンストラクタ
 *	@param[in] *icsSerial ICSに設定するUART(HardwareSerial型のポインタ)
-* 	@param[in] enpin 送受信切替えピンのピン番号
 **/
-IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *icsSerial,byte enpin)
+IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *icsSerial)
 {
   icsHardSerial = icsSerial;
-  enPin = enpin;
 }
 
 /**
 * @brief コンストラクタ
 * @param[in] *hardSerial ICSに設定するUART(HardwareSerial型のポインタ)
-* @param[in] enpin 送受信切替えピンのピン番号
 * @param[in] baudrate サーボの通信速度
 * @param[in] timeout 受信タイムアウト(ms)
 
 **/
-IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *hardSerial,byte enpin, long baudrate, int timeout)
+IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *hardSerial,long baudrate, int timeout)
 {
   icsHardSerial = hardSerial;
-  enPin = enpin;
   baudRate = baudrate;
   timeOut = timeout;
 }
@@ -80,10 +76,7 @@ bool IcsHardSerialClass::begin()
 
   icsHardSerial->begin(baudRate,SERIAL_8E1);
   icsHardSerial->setTimeout(timeOut);
-  pinMode(enPin, OUTPUT);
-  enLow();
-  
-	
+
   return true;
 }
 
@@ -105,16 +98,14 @@ bool IcsHardSerialClass::begin(long baudrate,int timeout)
 /**
 * @brief 通信の初期設定
 * @param[in] *serial ICSに設定するUART(HardwareSerial型のポインタ)
-* @param[in] enpin 送受信切替えピンのピン番号
 * @param[in] baudrate ICSの通信速度(115200,625000,1250000(1.25M)bps)
 * @param[in] timeout 受信タイムアウト(ms)
 * @retval true 通信設定完了
 * @retval false 通信設定失敗
 **/
-bool IcsHardSerialClass::begin(HardwareSerial *serial,int enpin,long baudrate,int timeout)
+bool IcsHardSerialClass::begin(HardwareSerial *serial,long baudrate,int timeout)
 {
   icsHardSerial = serial;
-  enPin = enpin;
   baudRate =  baudrate;
   timeOut  = timeout;
   return begin();
@@ -146,8 +137,7 @@ bool IcsHardSerialClass::synchronize(byte *txBuf, byte txLen, byte *rxBuf, byte 
 	}
 
 	icsHardSerial->flush(); //待つ
-	enHigh(); //送信切替
-	icsHardSerial->write(txBuf, txLen);
+  icsHardSerial->write(txBuf, txLen);
 	icsHardSerial->flush();   //待つ
 	
 	while (icsHardSerial->available() > 0) //受信バッファを消す
@@ -155,9 +145,6 @@ bool IcsHardSerialClass::synchronize(byte *txBuf, byte txLen, byte *rxBuf, byte 
 		// buff = icsSerial->read();	//空読み
 		icsHardSerial->read();		//空読み
 	}
-
-	enLow();  //受信切替
-
 
 	rxSize = icsHardSerial->readBytes(rxBuf, rxLen);
 
