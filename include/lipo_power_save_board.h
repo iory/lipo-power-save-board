@@ -4,7 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "driver/gpio.h"
 #include <driver/rtc_io.h>
-#include <IcsHardSerialClass.h>
+#include <IcsHardwareSerialClass.h>
 
 constexpr int uS_TO_S_FACTOR = 1000000ULL;  /* Conversion factor for micro seconds to seconds */
 const long BAUDRATE = 1250000;
@@ -121,7 +121,7 @@ class LipoPowerSaveBoard {
     enableTXRX1();
     pinMode(_TX_PIN1, OUTPUT_OPEN_DRAIN);
     Serial1.begin(BAUDRATE, SERIAL_8E1, _RX_PIN1, _TX_PIN1, false, TIMEOUT);
-    _krs = new IcsHardSerialClass(&Serial1, BAUDRATE, TIMEOUT);
+    _krs = new IcsHardwareSerialClass(&Serial1, BAUDRATE, TIMEOUT);
     _krs->begin();
   }
 
@@ -185,7 +185,7 @@ class LipoPowerSaveBoard {
   byte _TX_PIN1 = 17;
   byte _RX_PIN1 = 18;
 
-  IcsHardSerialClass *_krs;
+  IcsHardwareSerialClass *_krs;
 
   Adafruit_NeoPixel _pixels;
   int _brightness;

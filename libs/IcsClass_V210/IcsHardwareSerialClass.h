@@ -1,6 +1,6 @@
 
 /** 
-*  @file IcsHardSerialClass.h
+*  @file IcsHardwareSerialClass.h
 * @brief ICS3.5/3.6 arduino library use HardwareSeria header file
 * @author Kondo Kagaku Co.,Ltd.
 * @date 2017/12/27
@@ -15,13 +15,13 @@
 #include <Arduino.h>
 #include <IcsBaseClass.h>
 
-//IcsHardSerialClassクラス///////////////////////////////////////////////////
+//IcsHardwareSerialClassクラス///////////////////////////////////////////////////
 /**
-* @class IcsHardSerialClass
+* @class IcsHardwareSerialClass
 * @brief 近藤科学のKRSサーボをArduinoのHardwareSerialからアクセスできるようにしたクラス
 * @brief IcsBaseClassからの派生して作られている
 **/
-class IcsHardSerialClass : public IcsBaseClass
+class IcsHardwareSerialClass : public IcsBaseClass
 {
   //クラス内の型定義
   public:
@@ -30,15 +30,15 @@ class IcsHardSerialClass : public IcsBaseClass
   public:
     //コンストラクタ(construncor)
 	
-	IcsHardSerialClass();
+	IcsHardwareSerialClass();
 	
-	IcsHardSerialClass(HardwareSerial* icsSerial);
-	IcsHardSerialClass(HardwareSerial* icsSerial,long baudrate,int timeout);
+	IcsHardwareSerialClass(HardwareSerial* icsSerial);
+	IcsHardwareSerialClass(HardwareSerial* icsSerial,long baudrate,int timeout);
 
 
       
       //デストラクタ(destruntor)
-	~IcsHardSerialClass();
+	~IcsHardwareSerialClass();
   
   //変数
   public:

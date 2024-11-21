@@ -1,5 +1,5 @@
 /**
-*	@file IcsHardSerialClass.cpp
+*	@file IcsHardwareSerialClass.cpp
 *	@brief ICS3.5/3.6 arduino library use HardwareSerial
 *	@author Kondo Kagaku Co.,Ltd.
 *	@date	2017/12/27
@@ -9,12 +9,12 @@
 
 
 #include <Arduino.h>
-#include "IcsHardSerialClass.h"
+#include "IcsHardwareSerialClass.h"
 
 /**
 *	@brief コンストラクタ
 **/
-IcsHardSerialClass::IcsHardSerialClass()
+IcsHardwareSerialClass::IcsHardwareSerialClass()
 {
 	
 }
@@ -26,7 +26,7 @@ IcsHardSerialClass::IcsHardSerialClass()
 *	@brief コンストラクタ
 *	@param[in] *icsSerial ICSに設定するUART(HardwareSerial型のポインタ)
 **/
-IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *icsSerial)
+IcsHardwareSerialClass::IcsHardwareSerialClass(HardwareSerial *icsSerial)
 {
   icsHardSerial = icsSerial;
 }
@@ -38,7 +38,7 @@ IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *icsSerial)
 * @param[in] timeout 受信タイムアウト(ms)
 
 **/
-IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *hardSerial,long baudrate, int timeout)
+IcsHardwareSerialClass::IcsHardwareSerialClass(HardwareSerial *hardSerial,long baudrate, int timeout)
 {
   icsHardSerial = hardSerial;
   baudRate = baudrate;
@@ -50,7 +50,7 @@ IcsHardSerialClass::IcsHardSerialClass(HardwareSerial *hardSerial,long baudrate,
 * @brief デストラクタ
 * @post 使用していたのicsHardSerialを開放します
 **/
-IcsHardSerialClass::~IcsHardSerialClass()
+IcsHardwareSerialClass::~IcsHardwareSerialClass()
 {
   if (icsHardSerial)  //定義してあったらSerialを解放する
   {
@@ -67,7 +67,7 @@ IcsHardSerialClass::~IcsHardSerialClass()
 * @retval false 通信設定失敗
 * @attention Serialの設定、通信速度、タイムアウトは事前に設定してある事
 **/
-bool IcsHardSerialClass::begin()
+bool IcsHardwareSerialClass::begin()
 {
   if (icsHardSerial == nullptr)
   {
@@ -88,7 +88,7 @@ bool IcsHardSerialClass::begin()
 * @retval false 通信設定失敗
 * @attention UARTピンおよび送受信切替えピンは設定してある事
 **/
-bool IcsHardSerialClass::begin(long baudrate,int timeout)
+bool IcsHardwareSerialClass::begin(long baudrate,int timeout)
 {
   baudRate =  baudrate;
   timeOut  = timeout;
@@ -103,7 +103,7 @@ bool IcsHardSerialClass::begin(long baudrate,int timeout)
 * @retval true 通信設定完了
 * @retval false 通信設定失敗
 **/
-bool IcsHardSerialClass::begin(HardwareSerial *serial,long baudrate,int timeout)
+bool IcsHardwareSerialClass::begin(HardwareSerial *serial,long baudrate,int timeout)
 {
   icsHardSerial = serial;
   baudRate =  baudrate;
@@ -125,7 +125,7 @@ bool IcsHardSerialClass::begin(HardwareSerial *serial,long baudrate,int timeout)
 * @attention 送信データ数、受信データ数はコマンドによって違うので注意する
 * @date 2020/02/18 protectedからpublicに変更
 **/
-bool IcsHardSerialClass::synchronize(byte *txBuf, byte txLen, byte *rxBuf, byte rxLen)
+bool IcsHardwareSerialClass::synchronize(byte *txBuf, byte txLen, byte *rxBuf, byte rxLen)
 {
 	int rxSize; //受信数
 

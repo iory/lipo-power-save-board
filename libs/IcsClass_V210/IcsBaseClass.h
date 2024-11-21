@@ -22,7 +22,7 @@
 * - IDコマンドの実装
 *@par 2017/12/27	ver 2.0.0
 * - ICSClassを通信部分を分離。IcsBaseClassを作成。
-* - Serialを使用する「IcsHardSerialClass」と
+* - Serialを使用する「IcsHardwareSerialClass」と
 * <br> SoftSerialを使用する「IcsSoftSerialClass」をIcsBaseClassから派生させる
 * - SoftSerialはパリティが使えずタイミングが合わなかったので、「KoCustomSoftSerial」を作成
 *@par 2016/12/27　ver	1.0.0
