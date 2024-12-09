@@ -4,7 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "driver/gpio.h"
 #include <driver/rtc_io.h>
-#include <IcsHardwareSerialClass.h>
+#include <ics_air_relay.h>
 
 constexpr int uS_TO_S_FACTOR = 1000000ULL;  /* Conversion factor for micro seconds to seconds */
 const long BAUDRATE = 1250000;
@@ -121,7 +121,7 @@ class LipoPowerSaveBoard {
     enableTXRX1();
     pinMode(_TX_PIN1, OUTPUT_OPEN_DRAIN);
     Serial1.begin(BAUDRATE, SERIAL_8E1, _RX_PIN1, _TX_PIN1, false, TIMEOUT);
-    _krs = new IcsHardwareSerialClass(&Serial1, BAUDRATE, TIMEOUT);
+    _krs = new IcsAirRelay(&Serial1, BAUDRATE, TIMEOUT);
     _krs->begin();
   }
 
@@ -130,26 +130,17 @@ class LipoPowerSaveBoard {
   }
 
   float getPressure() {
-    std::vector<byte> rx_buff;
-    while (1) {
-      rx_buff = _krs->getSubcommandPacket(KJS_ID);
-      USBSerial.printf("[getPressure] rx_buff.size(): %d\n", rx_buff.size());
-      if (rx_buff.size() > 0) {
-        std::vector<byte> partial_buff(rx_buff.begin() + 2, rx_buff.end());
-        return _krs->getPressureFromPacket(partial_buff);
-      }
+    float pressure;
+    while (_krs->getPressure(KJS_ID, &pressure) == -1) {
+      delay(10);
     }
+    return pressure;
   }
 
   float getAveragePressure(int n = 5) {
     float pressure = 0;
-    std::vector<byte> rx_buff;
     for (int i = 0; i < n; ++i) {
-      while (rx_buff.size() == 0) {
-        rx_buff = _krs->getSubcommandPacket(KJS_ID);
-      }
-      pressure += _krs->getPressureFromPacket(rx_buff);
-      rx_buff.clear();
+      pressure += getPressure();
     }
     return pressure / n;
   }
@@ -185,7 +176,7 @@ class LipoPowerSaveBoard {
   byte _TX_PIN1 = 17;
   byte _RX_PIN1 = 18;
 
-  IcsHardwareSerialClass *_krs;
+  IcsAirRelay *_krs;
 
   Adafruit_NeoPixel _pixels;
   int _brightness;
